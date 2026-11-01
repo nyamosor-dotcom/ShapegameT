@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ирээдүйн аврагчид бүлэг - Дүрс таних мини тоглоом</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body { margin: 0; padding: 0; background: linear-gradient(135deg, #a8ede7 0%, #fed6e3 100%); background-color: #e0f7fa; font-family: 'Comic Sans MS', sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #game-container { width: 100%; max-width: 800px; height: 100%; max-height: 600px; background: #ffffff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; overflow: hidden; display: flex; flex-direction: column; border: 6px solid #ffca28; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff; z-index: 10; padding: 20px; text-align: center; }
+        .screen.hidden { display: none !important; }
+        h1 { color: #ff6f00; font-size: 2.1rem; margin-bottom: 10px; text-shadow: 2px 2px 0px #ffe082; }
+        p { color: #555; font-size: 1.1rem; margin-bottom: 15px; }
+        input[type="text"] { padding: 15px 25px; font-size: 1.5rem; border: 4px solid #ab47bc; border-radius: 50px; outline: none; text-align: center; width: 80%; max-width: 350px; margin-bottom: 20px; font-family: inherit; color: #333; background: #f3e5f5; }
+        .btn { background-color: #66bb6a; color: white; border: none; padding: 14px 35px; font-size: 1.6rem; border-radius: 50px; cursor: pointer; box-shadow: 0 6px 0 #388e3c; transition: all 0.1s ease; font-family: inherit; font-weight: bold; }
+        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #388e3c; }
+        #game-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #fff8e1; border-bottom: 4px dashed #ffe082; font-size: 1.2rem; font-weight: bold; color: #f57f17; z-index: 5; flex-shrink: 0; width: 100%; }
+        #play-area { flex: 1; position: relative; background: linear-gradient(to bottom, #e1f5fe, #ffffff); overflow: hidden; width: 100%; }
+        .falling-shape { position: absolute; top: -70px; width: 70px; height: 70px; display: flex; justify-content: center; align-items: center; font-size: 55px; z-index: 4; will-change: top, left; }
+        #controls-panel { height: 120px; background: #ede7f6; border-top: 4px solid #d1c4e9; display: flex; justify-content: space-around; align-items: center; padding: 10px 20px; z-index: 5; flex-shrink: 0; width: 100%; }
+        .target-btn { width: 90px; height: 90px; border-radius: 24px; border: 4px solid #fff; box-shadow: 0 6px 15px rgba(0,0,0,0.15); display: flex; justify-content: center; align-items: center; font-size: 50px; cursor: pointer; transition: transform 0.1s ease, background 0.2s; }
+        .target-btn:active { transform: scale(0.9); }
+        #btn-circle { background: #ff7043; }
+        #btn-triangle { background: #ab47bc; }
+        #btn-square { background: #26a69a; }
+        .floating-feedback { position: absolute; font-size: 60px; z-index: 10; animation: floatUp 0.8s ease-out forwards; pointer-events: none; }
+        @keyframes floatUp { 0% { transform: scale(0.5); opacity: 1; } 50% { transform: scale(1.3) translateY(-30px); opacity: 1; } 100% { transform: scale(1) translateY(-60px); opacity: 0; } }
+        .result-badges { display: flex; gap: 15px; justify-content: center; margin: 15px 0; font-size: 40px; }
+        .badge-box { background: #fff9c4; padding: 12px 18px; border-radius: 16px; border: 3px solid #fbc02d; display: flex; flex-direction: column; align-items: center; min-width: 85px; }
+        .badge-count { font-size: 1.4rem; color: #d84315; margin-top: 5px; font-weight: bold; }
+        .teacher-signature { position: absolute; bottom: 15px; right: 20px; font-size: 1rem; color: #7b1fa2; font-weight: bold; background: #f3e5f5; padding: 6px 14px; border-radius: 12px; border: 2px dashed #ab47bc; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 1. Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1>⭐ Ирээдүйн аврагчид бүлэг ⭐</h1>
+            <p>Дүрс таних хөгжилтэй мини тоглоом</p>
+            <input type="text" id="player-name" placeholder="Хүүхдийн нэр..." maxlength="15" autocomplete="off">
+            <br>
+            <button class="btn" onclick="startGame()">Эхлэх 🚀</button>
+            <div class="teacher-signature">Бүлгийн багш: А.Ням-Осор</div>
+        </div>
+
+        <!-- 2. Game Screen -->
+        <div id="game-screen" class="screen hidden" style="padding:0; justify-content: flex-start;">
+            <div id="game-header">
+                <span id="display-name">Нэр: -</span>
+                <span id="progress-text">Дүрс: 1 / 10</span>
+            </div>
+            <div id="play-area"></div>
+            <div id="controls-panel">
+                <div class="target-btn" id="btn-circle" onclick="handleInput('circle')"><span id="icon-circle">🔴</span></div>
+                <div class="target-btn" id="btn-triangle" onclick="handleInput('triangle')"><span id="icon-triangle">🔺</span></div>
+                <div class="target-btn" id="btn-square" onclick="handleInput('square')"><span id="icon-square">🟩</span></div>
+            </div>
+        </div>
+
+        <!-- 3. Result Screen -->
+        <div id="result-screen" class="screen hidden">
+            <div id="result-emoji" style="font-size: 65px; margin-bottom: 5px;">👑</div>
+            <h1 id="result-title">Амжилттай дууслаа!</h1>
+            <p id="result-name-display" style="font-size: 1.2rem; font-weight: bold; color: #7b1fa2; margin-bottom: 5px;"></p>
+            <div class="result-badges">
+                <div class="badge-box">
+                    <span>⭐</span>
+                    <span class="badge-count" id="score-stars">0</span>
+                </div>
+                <div class="badge-box">
+                    <span>🟢</span>
+                    <span class="badge-count" id="score-correct">0</span>
+                </div>
+                <div class="badge-box">
+                    <span>❌</span>
+                    <span class="badge-count" id="score-wrong">0</span>
+                </div>
+            </div>
+            <button class="btn" onclick="resetGame()">Дахин тоглох 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        let customShapes = JSON.parse(localStorage.getItem('shapeGameCustomConfig') || JSON.stringify([
+            { type: 'circle', symbol: '🔴' },
+            { type: 'triangle', symbol: '🔺' },
+            { type: 'square', symbol: '🟩' }
+        ]));
+
+        function updateShapeUI() {
+            document.getElementById('icon-circle').innerText = customShapes[0].symbol;
+            document.getElementById('icon-triangle').innerText = customShapes[1].symbol;
+            document.getElementById('icon-square').innerText = customShapes[2].symbol;
+        }
+
+        let playerName = "";
+        let currentShapeIndex = 0;
+        const totalShapes = 10;
+        let score = 0;
+        let wrongCount = 0;
+        let currentActiveShape = null;
+        let fallInterval = null;
+        let isAnswered = false;
+
+        const STORAGE_KEY = 'shapeGameScores_v4_cloud';
+
+        function saveScore(newRecord) {
+            let scores = [];
+            try {
+                scores = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            } catch (e) { scores = []; }
+            scores.push(newRecord);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateShapeUI();
+        });
+
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+                if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                } else if (type === 'start') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.2, now);
+                    gainNode.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                }
+            } catch (e) {}
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('player-name').value.trim();
+            if (!nameInput) { alert("Хүүхдийн нэрээ оруулна уу!"); return; }
+            playerName = nameInput;
+            playSound('start');
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('display-name').innerText = `Нэр: ${playerName}`;
+            
+            currentShapeIndex = 0; score = 0; wrongCount = 0;
+            nextShape();
+        }
+
+        function nextShape() {
+            if (currentShapeIndex >= totalShapes) { endGame(); return; }
+            currentShapeIndex++;
+            document.getElementById('progress-text').innerText = `Дүрс: ${currentShapeIndex} / ${totalShapes}`;
+            isAnswered = false;
+
+            const playArea = document.getElementById('play-area');
+            if (currentActiveShape && currentActiveShape.element) currentActiveShape.element.remove();
+
+            const randomShapeData = customShapes[Math.floor(Math.random() * customShapes.length)];
+            const shapeEl = document.createElement('div');
+            shapeEl.className = 'falling-shape';
+            shapeEl.innerText = randomShapeData.symbol;
+            
+            const playWidth = playArea.clientWidth > 0 ? playArea.clientWidth : 750;
+            const randomX = Math.floor(Math.random() * (playWidth - 90)) + 20;
+            shapeEl.style.left = randomX + 'px';
+            shapeEl.style.top = '-70px';
+
+            playArea.appendChild(shapeEl);
+            currentActiveShape = { type: randomShapeData.type, element: shapeEl, y: -70 };
+
+            const playHeight = playArea.clientHeight > 0 ? playArea.clientHeight : 350;
+            const targetHeight = playHeight - 75;
+            const fallSpeed = 2.5;
+
+            if (fallInterval) clearInterval(fallInterval);
+            fallInterval = setInterval(() => {
+                if (isAnswered) { clearInterval(fallInterval); return; }
+                currentActiveShape.y += fallSpeed;
+                currentActiveShape.element.style.top = currentActiveShape.y + 'px';
+                if (currentActiveShape.y >= targetHeight) {
+                    clearInterval(fallInterval);
+                    handleInput(null);
+                }
+            }, 20);
+        }
+
+        function handleInput(selectedType) {
+            if (isAnswered) return;
+            isAnswered = true;
+            if (fallInterval) clearInterval(fallInterval);
+
+            const playArea = document.getElementById('play-area');
+            const feedbackEl = document.createElement('div');
+            feedbackEl.className = 'floating-feedback';
+            
+            if (currentActiveShape && currentActiveShape.element) {
+                feedbackEl.style.left = currentActiveShape.element.style.left;
+                feedbackEl.style.top = currentActiveShape.element.style.top;
+            } else {
+                feedbackEl.style.left = '50px'; feedbackEl.style.top = '200px';
+            }
+
+            if (selectedType && selectedType === currentActiveShape.type) {
+                score++; playSound('correct'); feedbackEl.innerText = '✔️';
+            } else {
+                wrongCount++; playSound('wrong'); feedbackEl.innerText = '❌';
+            }
+
+            playArea.appendChild(feedbackEl);
+            if (currentActiveShape && currentActiveShape.element) currentActiveShape.element.remove();
+
+            setTimeout(() => { feedbackEl.remove(); nextShape(); }, 600);
+        }
+
+        function endGame() {
+            if (fallInterval) clearInterval(fallInterval);
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('result-name-display').innerText = `${playerName}, сайн байлаа! 🎉`;
+            document.getElementById('score-stars').innerText = score;
+            document.getElementById('score-correct').innerText = score;
+            document.getElementById('score-wrong').innerText = wrongCount;
+
+            let emoji = "👑";
+            if (score <= 5) emoji = "⭐";
+            else if (score <= 8) emoji = "🌟";
+            document.getElementById('result-emoji').innerText = emoji;
+            playSound('correct');
+
+            saveScore({ name: playerName, score: score, wrong: wrongCount, date: new Date().toLocaleDateString() });
+        }
+
+        function resetGame() {
+            if (fallInterval) clearInterval(fallInterval);
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('player-name').value = '';
+        }
+    </script>
+</body>
+</html>
